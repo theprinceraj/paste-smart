@@ -207,19 +207,6 @@ body {
   background: var(--surface-hover);
 }
 
-.settings {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  height: 100%;
-  padding: 16px;
-}
-
-.settings__title {
-  font-size: 16px;
-  margin: 0;
-}
-
 .settings__hint {
   color: var(--muted);
   font-size: 13px;

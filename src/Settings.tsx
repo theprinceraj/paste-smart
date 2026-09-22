@@ -58,40 +58,50 @@ function Settings() {
   );
 
   return (
-    <div className="settings">
-      <h1 className="settings__title">TypeSafe API key</h1>
-      <p className="settings__hint">
-        {alreadyConfigured
-          ? "A key is already saved. Paste a new one to replace it."
-          : "Paste your TypeSafe API key to enable Smart Paste."}
-      </p>
-      <form className="settings__form" onSubmit={(event) => void handleSubmit(event)}>
-        <input
-          className="settings__input"
-          type="password"
-          value={keyInput}
-          onChange={(event) => setKeyInput(event.target.value)}
-          placeholder="apikey_…"
-          autoFocus
-        />
-        {error && (
-          <p className="status status--error" role="alert">
-            {error}
-          </p>
-        )}
-        <div className="settings__actions">
-          <button type="button" className="settings__cancel" onClick={close}>
-            Cancel
-          </button>
-          <button
-            type="submit"
-            className="settings__save"
-            disabled={saveState === "saving" || keyInput.trim().length === 0}
-          >
-            {saveState === "saving" ? "Saving…" : "Save"}
-          </button>
+    <div className="overlay">
+      <header className="overlay__header">
+        <div className="overlay__target" data-tauri-drag-region>
+          <span className="overlay__app">Settings</span>
+          <span className="overlay__title">TypeSafe API key</span>
         </div>
-      </form>
+        <button className="overlay__close" type="button" onClick={close} aria-label="Close">
+          ✕
+        </button>
+      </header>
+      <main className="overlay__body settings">
+        <p className="settings__hint">
+          {alreadyConfigured
+            ? "A key is already saved. Paste a new one to replace it."
+            : "Paste your TypeSafe API key to enable Smart Paste."}
+        </p>
+        <form className="settings__form" onSubmit={(event) => void handleSubmit(event)}>
+          <input
+            className="settings__input"
+            type="password"
+            value={keyInput}
+            onChange={(event) => setKeyInput(event.target.value)}
+            placeholder="apikey_…"
+            autoFocus
+          />
+          {error && (
+            <p className="status status--error" role="alert">
+              {error}
+            </p>
+          )}
+          <div className="settings__actions">
+            <button type="button" className="settings__cancel" onClick={close}>
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="settings__save"
+              disabled={saveState === "saving" || keyInput.trim().length === 0}
+            >
+              {saveState === "saving" ? "Saving…" : "Save"}
+            </button>
+          </div>
+        </form>
+      </main>
     </div>
   );
 }
