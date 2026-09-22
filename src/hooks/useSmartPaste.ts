@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { MISSING_KEY_MESSAGE } from "../config";
+import { hasApiKey } from "../lib/commands";
 import { selectBestItem } from "../services/jev";
 import { pasteText } from "../services/smartPaste";
 import type { ActiveContext, ClipboardItem, SmartPasteStatus, Suggestion } from "../types";
@@ -87,6 +89,15 @@ export function useSmartPaste({
     if (!context) {
       setStatus("error");
       setError("Could not determine the active window.");
+      await reveal();
+      return;
+    }
+    // Checked up front rather than left to the request: a missing key surfaces
+    // as a generic "Connection error" once it round-trips through the SDK's
+    // fetch error wrapping, losing the exact message StatusBar matches on.
+    if (!(await hasApiKey())) {
+      setStatus("error");
+      setError(MISSING_KEY_MESSAGE);
       await reveal();
       return;
     }

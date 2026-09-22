@@ -21,7 +21,24 @@ function Settings() {
     void hasApiKey().then(setAlreadyConfigured);
   }, []);
 
-  const close = useCallback(() => void getCurrentWindow().close(), []);
+  // The window is preloaded once and reused (hidden, not destroyed) rather
+  // than rebuilt on every open — see `settings_window.rs::preload` — so its
+  // own state has to be refreshed on each reopen instead of via remount.
+  useEffect(() => {
+    const window = getCurrentWindow();
+    const unlisten = window.onFocusChanged(({ payload: focused }) => {
+      if (!focused) return;
+      setKeyInput("");
+      setSaveState("idle");
+      setError(null);
+      void hasApiKey().then(setAlreadyConfigured);
+    });
+    return () => void unlisten.then((stop) => stop());
+  }, []);
+
+  // Hidden rather than closed, so the next open reuses the already-loaded
+  // window instead of paying WebView2's startup cost again.
+  const close = useCallback(() => void getCurrentWindow().hide(), []);
   useEscapeKey(true, close);
 
   const handleSubmit = useCallback(

@@ -14,8 +14,11 @@ interface OverlayProps {
 export function Overlay({ context, onClose, children }: OverlayProps) {
   return (
     <div className="overlay">
-      <header className="overlay__header" data-tauri-drag-region>
-        <div className="overlay__target">
+      <header className="overlay__header">
+        {/* Drag region is scoped to this div, not the whole header — a region
+            spanning the close button would swallow its clicks as a native
+            title-bar drag (WM_NCHITTEST/HTCAPTION) before React ever sees them. */}
+        <div className="overlay__target" data-tauri-drag-region>
           <span className="overlay__app">{context?.appName ?? "Unknown app"}</span>
           <span className="overlay__title">{context?.title ?? "No active window"}</span>
         </div>

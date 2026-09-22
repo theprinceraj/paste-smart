@@ -74,6 +74,9 @@ pub fn run() {
             api::load_api_key(app.handle());
             // Open the connection to the API now, not on the first paste.
             api::warm_up();
+            // Build the Settings window hidden now, so its first-ever appearance
+            // later isn't a blank rectangle while WebView2 spins up.
+            settings_window::preload(app.handle())?;
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
