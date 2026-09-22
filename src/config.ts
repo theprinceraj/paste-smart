@@ -31,3 +31,12 @@ export const JEV_PREVIEW_LENGTH = 120;
 
 /** How often the foreground window is sampled, in milliseconds. */
 export const ACTIVE_CONTEXT_POLL_INTERVAL_MS = 300;
+
+/**
+ * Surfaced when no API key has been saved yet.
+ *
+ * Mirrored verbatim in `src-tauri/src/api.rs`'s `MISSING_KEY_MESSAGE` — kept
+ * as an exact string match (rather than an error code) so both sides stay a
+ * single source of truth without a shared crate/package between them.
+ */
+export const MISSING_KEY_MESSAGE = "No TypeSafe API key configured. Add one in Settings.";

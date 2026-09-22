@@ -22,8 +22,9 @@ let client: TypeSafeClient | null = null;
 /**
  * Placeholder handed to the SDK so it will construct requests at all.
  *
- * The real `TYPESAFE_API_KEY` lives only in the Rust process now (see
- * `src-tauri/src/api.rs`) — `pooledFetch` routes every request through
+ * The user's real API key lives only in the Rust process (see
+ * `src-tauri/src/api.rs`), loaded from a local config file they fill in via
+ * the Settings window — `pooledFetch` routes every request through
  * `invoke("api_request", ...)`, which discards whatever `Authorization`
  * header the SDK sets here and attaches the real key server-side. This value
  * is never sent anywhere; it only satisfies the SDK's "no key configured" check.

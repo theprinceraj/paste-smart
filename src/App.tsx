@@ -10,6 +10,8 @@ import { useEscapeKey } from "./hooks/useEscapeKey";
 import { useOverlay } from "./hooks/useOverlay";
 import { useSmartPaste } from "./hooks/useSmartPaste";
 import { useTrayStatus } from "./hooks/useTrayStatus";
+import { openSettingsWindow } from "./lib/commands";
+import { onApiKeyUpdated } from "./lib/events";
 import "./App.css";
 
 function App() {
@@ -37,6 +39,15 @@ function App() {
   useEscapeKey(isVisible, () => void close());
   useTrayStatus(history.length);
 
+  // Clear a stale "no key configured" error the moment Settings saves one,
+  // so the user doesn't have to dismiss and reopen the overlay to retry.
+  useEffect(() => {
+    const unlisten = onApiKeyUpdated(reset);
+    return () => {
+      void unlisten.then((stop) => stop());
+    };
+  }, [reset]);
+
   const isBusy = status === "thinking" || status === "pasting";
 
   const handleClose = useCallback(() => void close(), [close]);
@@ -48,7 +59,13 @@ function App() {
         isBusy={isBusy}
         onClick={() => void run()}
       />
-      <StatusBar status={status} error={error} suggestion={suggestion} itemCount={history.length} />
+      <StatusBar
+        status={status}
+        error={error}
+        suggestion={suggestion}
+        itemCount={history.length}
+        onOpenSettings={() => void openSettingsWindow()}
+      />
       <HistoryList
         items={history}
         suggestedId={suggestion?.item.id ?? null}

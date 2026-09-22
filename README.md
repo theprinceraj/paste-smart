@@ -15,20 +15,19 @@ A lightweight Windows clipboard utility built with Tauri 2, React and TypeScript
 
 ```sh
 bun install
-cp .env.example .env   # then set TYPESAFE_API_KEY
+cp .env.example .env
 bun run tauri dev
 ```
 
-`TYPESAFE_API_KEY` is read at build time through Vite's `envPrefix`
-(`vite.config.ts`) because the SDK runs inside the webview — it is therefore
-inlined into the bundle. The request itself is made from Rust through
-`@tauri-apps/plugin-http`: the API rejects browser origins, so a plain webview
-`fetch` fails with _Disallowed CORS origin_. The allowed host is scoped in
-`src-tauri/capabilities/default.json`. Keep `.env` out of version control, and move the Jev
-call behind a Rust command or a backend before shipping this publicly.
+Your TypeSafe API key isn't set via `.env` — open the app, click the tray
+icon → **Settings…**, and paste it in there. It's saved to a local config
+file and read by Rust (`src-tauri/src/api.rs`); it never reaches the webview
+bundle. The request itself is made from Rust: the API rejects browser
+origins, so a plain webview `fetch` fails with _Disallowed CORS origin_. The
+allowed host is scoped in `src-tauri/src/api.rs`'s `API_ORIGIN` check.
 
 Without a key the overlay still works as a plain clipboard picker; Smart Paste
-reports that the key is missing.
+shows an "Open Settings" prompt instead of failing silently.
 
 ## Using it
 
@@ -54,9 +53,13 @@ src/
   services/     Jev client and the paste sequence
   types/        shared interfaces
   config.ts     thresholds, poll interval, hotkey
+  App.tsx       the overlay (default root)
+  Settings.tsx  the API key form, rendered instead of App.tsx in the Settings window
 src-tauri/
-  src/lib.rs    get_active_context (active-win-pos-rs), simulate_paste (enigo)
-  src/tray.rs   tray icon, menu, and the tooltip status
+  src/lib.rs              get_active_context (active-win-pos-rs), simulate_paste (enigo)
+  src/api.rs              pooled HTTP client, user API key storage
+  src/settings_window.rs  opens/focuses the Settings window
+  src/tray.rs             tray icon, menu, and the tooltip status
 ```
 
 ## Tuning

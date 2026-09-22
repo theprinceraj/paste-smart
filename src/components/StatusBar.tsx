@@ -1,3 +1,4 @@
+import { MISSING_KEY_MESSAGE } from "../config";
 import type { SmartPasteStatus, Suggestion } from "../types";
 
 interface StatusBarProps {
@@ -6,6 +7,8 @@ interface StatusBarProps {
   suggestion: Suggestion | null;
   /** Number of entries currently tracked. */
   itemCount: number;
+  /** Opens the Settings window. Only used when `error` is the missing-key message. */
+  onOpenSettings: () => void;
 }
 
 const asPercent = (value: number): string => `${Math.round(value * 100)}%`;
@@ -26,9 +29,17 @@ function message({ status, error, suggestion, itemCount }: StatusBarProps): stri
 /** Single line reporting progress, errors and Jev's confidence. */
 export function StatusBar(props: StatusBarProps) {
   const tone = props.status === "error" ? "status status--error" : "status";
+  const isMissingKey = props.status === "error" && props.error === MISSING_KEY_MESSAGE;
   return (
-    <p className={tone} role={props.status === "error" ? "alert" : "status"}>
-      {message(props)}
-    </p>
+    <div className="status-bar">
+      <p className={tone} role={props.status === "error" ? "alert" : "status"}>
+        {message(props)}
+      </p>
+      {isMissingKey && (
+        <button type="button" className="status-bar__settings" onClick={props.onOpenSettings}>
+          Open Settings
+        </button>
+      )}
+    </div>
   );
 }

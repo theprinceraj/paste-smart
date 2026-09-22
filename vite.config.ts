@@ -9,8 +9,9 @@ export default defineConfig(() => ({
   plugins: [react()],
 
   // Expose non-secret TYPESAFE_* overrides (base URL, model) to the webview
-  // bundle, alongside Vite's own VITE_ prefix. TYPESAFE_API_KEY is not one of
-  // these: it stays server-side in src-tauri/src/api.rs and is never read here.
+  // bundle, alongside Vite's own VITE_ prefix. The user's real API key is
+  // never one of these: it's entered in the Settings window and stays
+  // server-side in src-tauri/src/api.rs.
   envPrefix: ["VITE_", "TAURI_ENV_", "TYPESAFE_"],
 
   // Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`

@@ -67,15 +67,16 @@ cd src-tauri && cargo clippy   # Rust lints
 
 ### Rust (`src-tauri/src/`)
 
-| File      | Responsibility                                                          |
-| --------- | ----------------------------------------------------------------------- |
-| `lib.rs`  | Plugin/tray wiring, `get_active_context`, `simulate_paste`, tray status |
-| `api.rs`  | **Pooled HTTP client for the Jev API** — see below                      |
-| `tray.rs` | Tray icon, menu, tooltip status, `smart-paste://show-overlay` event     |
-| `main.rs` | Thin entry point; all logic is in `lib.rs`                              |
+| File                 | Responsibility                                                           |
+| -------------------- | ------------------------------------------------------------------------ |
+| `lib.rs`             | Plugin/tray wiring, `get_active_context`, `simulate_paste`, tray status  |
+| `api.rs`             | **Pooled HTTP client for the Jev API**, user API key storage — see below |
+| `settings_window.rs` | Opens/focuses the Settings window                                        |
+| `tray.rs`            | Tray icon, menu, tooltip status, `smart-paste://show-overlay` event      |
+| `main.rs`            | Thin entry point; all logic is in `lib.rs`                               |
 
 Registered commands: `get_active_context`, `simulate_paste`, `set_tray_status`,
-`api_request`.
+`api_request`, `has_api_key`, `set_api_key`, `open_settings_window`.
 
 ### Frontend (`src/`)
 
@@ -91,6 +92,11 @@ config.ts     every tunable constant. Do not scatter magic numbers.
 ```
 
 `App.tsx` wires hooks together and renders. It holds no logic of its own.
+
+`Settings.tsx` is a second root component (the API key entry form) rendered
+instead of `App.tsx` when the Settings window loads — `main.tsx` branches on
+`window.location.hash === "#settings"` since both windows share one Vite
+bundle. No router; don't add one for two screens.
 
 ### The two paths
 
@@ -163,24 +169,32 @@ instead of a whole second inference.
 
 ## Secrets and environment
 
-- The API key is read from **`TYPESAFE_API_KEY`**, via `.env` (gitignored).
-  `.env.example` is committed. `vite.config.ts` sets
-  `envPrefix: ["VITE_", "TAURI_ENV_", "TYPESAFE_"]`.
-- **Never hardcode, log, or print the key.** When you need it in a shell, read
-  it into a variable (`grep '^TYPESAFE_API_KEY=' .env | cut -d= -f2-`), never
-  echo it.
-- ⚠️ **Known limitation:** Vite inlines the key into the webview bundle at build
-  time, because the SDK runs in the webview. This is acceptable for a local
-  prototype but **must be fixed before any public distribution** — move the key
-  and the SDK call fully behind Rust (`api.rs` already owns the transport, so
-  this is a contained change).
+- There is no build-time or shared API key. Each user pastes **their own**
+  TypeSafe API key into the Settings window (tray icon → Settings…, or the
+  "Open Settings" button the overlay shows when a request fails for lack of
+  one). `api.rs`'s `set_api_key` command persists it to
+  `<app_config_dir>/config.json`; `load_api_key` reads it back into memory at
+  startup. It never touches `.env`, Vite, or the webview bundle.
+- **Never hardcode, log, or print the key.** `api_request` attaches it
+  server-side (Rust) as the `Authorization` header; the frontend only ever
+  sees a placeholder (`PLACEHOLDER_API_KEY` in `jev.ts`).
+- `.env`/`.env.example` only document optional, non-secret Vite-time overrides
+  (`TYPESAFE_BASE_URL`, `TYPESAFE_DEFAULT_MODEL`) — nothing sensitive belongs
+  there.
 
 ## Gotchas
 
-**Tauri capabilities.** Every command needs an entry in
-`src-tauri/capabilities/`. Non-obvious: `core:window:default` does **not**
-include `allow-start-dragging` — it's listed explicitly so `data-tauri-drag-region`
-works. Platform-gated permissions (global-shortcut) live in `desktop.json`.
+**Tauri capabilities are scoped per window label, not global.** Custom
+`#[tauri::command]`s (ours) run unrestricted regardless of capabilities — but
+**plugin** commands (anything under `core:*`, e.g. `getCurrentWindow().close()`)
+are ACL-checked per window. A capability's `"windows"` array must list every
+window label that needs it: `default.json` covers `"main"` (the overlay) only,
+so the Settings window has its own `settings.json` capability
+(`"windows": ["settings"]`) granting just `core:window:allow-close`. Forgetting
+this means the new window's close/show/focus calls fail silently. Non-obvious
+too: `core:window:default` does **not** include `allow-start-dragging` — it's
+listed explicitly on `default.json` so `data-tauri-drag-region` works.
+Platform-gated permissions (global-shortcut) live in `desktop.json`.
 
 **CORS.** The TypeSafe API rejects browser origins outright
 (`400 Disallowed CORS origin`). The webview can never call it directly. All

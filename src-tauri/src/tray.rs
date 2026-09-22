@@ -5,6 +5,8 @@ use tauri::menu::{Menu, MenuItem, PredefinedMenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::{App, AppHandle, Emitter, Runtime};
 
+use crate::settings_window::open_settings;
+
 /// Id of the tray icon, used to look it up when the tooltip changes.
 pub const TRAY_ID: &str = "smart-paste";
 
@@ -23,9 +25,10 @@ fn request_overlay<R: Runtime>(app: &AppHandle<R>) {
 pub fn setup<R: Runtime>(app: &App<R>) -> tauri::Result<()> {
     let show = MenuItem::with_id(app, "show", "Show Smart Paste", true, None::<&str>)?;
     let hotkey = MenuItem::with_id(app, "hotkey", "Hotkey: Ctrl+Shift+V", false, None::<&str>)?;
+    let settings = MenuItem::with_id(app, "settings", "Settings…", true, None::<&str>)?;
     let separator = PredefinedMenuItem::separator(app)?;
     let quit = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
-    let menu = Menu::with_items(app, &[&show, &hotkey, &separator, &quit])?;
+    let menu = Menu::with_items(app, &[&show, &hotkey, &settings, &separator, &quit])?;
 
     TrayIconBuilder::with_id(TRAY_ID)
         .icon(
@@ -39,6 +42,11 @@ pub fn setup<R: Runtime>(app: &App<R>) -> tauri::Result<()> {
         .show_menu_on_left_click(false)
         .on_menu_event(|app, event| match event.id.as_ref() {
             "show" => request_overlay(app),
+            "settings" => {
+                if let Err(error) = open_settings(app) {
+                    eprintln!("Failed to open Settings: {error}");
+                }
+            }
             "quit" => app.exit(0),
             _ => {}
         })

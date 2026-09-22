@@ -6,11 +6,10 @@ const root = process.cwd();
 
 const read = (file) => readFile(join(root, file), "utf8");
 
-const [packageText, cargoText, tauriText, envExample] = await Promise.all([
+const [packageText, cargoText, tauriText] = await Promise.all([
   read("package.json"),
   read("src-tauri/Cargo.toml"),
   read("src-tauri/tauri.conf.json"),
-  read(".env.example"),
 ]);
 
 const packageJson = JSON.parse(packageText);
@@ -64,10 +63,6 @@ try {
   await read("bun.lock");
 } catch {
   errors.push("Missing Bun lockfile: bun.lock");
-}
-
-if (!/^TYPESAFE_API_KEY=/m.test(envExample)) {
-  errors.push(".env.example must document TYPESAFE_API_KEY.");
 }
 
 if (errors.length > 0) {

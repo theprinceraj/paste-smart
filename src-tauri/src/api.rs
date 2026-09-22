@@ -7,10 +7,13 @@
 //! so the hotkey usually spends nothing on setup.
 
 use std::collections::HashMap;
-use std::sync::OnceLock;
+use std::fs;
+use std::path::PathBuf;
+use std::sync::{OnceLock, RwLock};
 use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
+use tauri::{AppHandle, Emitter, Manager};
 
 /// Only this origin may be reached. The webview hands us a URL, so the host is
 /// pinned here rather than trusted from the frontend.
@@ -33,34 +36,82 @@ const WARM_UP_TIMEOUT: Duration = Duration::from_secs(10);
 /// the body reaches the webview; forwarding them would mislead `Response`.
 const STRIPPED_HEADERS: [&str; 2] = ["content-encoding", "content-length"];
 
+/// Shown to the user (via the overlay's error text) when no key is on file.
+/// Mirrored verbatim in `src/config.ts` — the frontend matches on this exact
+/// string to decide when to offer an "Open Settings" button.
+pub const MISSING_KEY_MESSAGE: &str = "No TypeSafe API key configured. Add one in Settings.";
+
+/// Emitted after `set_api_key` saves successfully, so an already-open overlay
+/// can clear a stale "no key" message without restarting the app.
+const API_KEY_UPDATED_EVENT: &str = "smart-paste://api-key-updated";
+
 static CLIENT: OnceLock<reqwest::Client> = OnceLock::new();
 
-static API_KEY: OnceLock<String> = OnceLock::new();
+/// The user's own API key, loaded from disk at startup and updated in place
+/// by `set_api_key`. Never sent to the webview: the SDK running there is
+/// given a placeholder, and every real request gets its `Authorization`
+/// header attached here instead.
+static API_KEY: OnceLock<RwLock<Option<String>>> = OnceLock::new();
 
-/// Load `.env` from the repo root, next to `src-tauri`.
-///
-/// A missing file is fine — a real environment variable set on the host
-/// (the normal case in production) takes over instead.
-pub fn load_env() {
-    if let Some(root) = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).parent() {
-        let _ = dotenvy::from_path(root.join(".env"));
-    }
+/// On-disk shape of the config file. `#[serde(default)]` so an empty or
+/// partially-written file is just "no key yet", not a parse error.
+#[derive(Debug, Default, Serialize, Deserialize)]
+struct Config {
+    #[serde(default)]
+    typesafe_api_key: Option<String>,
 }
 
-/// The key used to authenticate with the Jev API.
+fn config_path(app: &AppHandle) -> Result<PathBuf, String> {
+    let dir = app.path().app_config_dir().map_err(|e| e.to_string())?;
+    fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+    Ok(dir.join("config.json"))
+}
+
+/// Load the saved API key (if any) from disk into memory.
 ///
-/// Read once from the environment. It never reaches the webview: the SDK
-/// running there is given a placeholder, and every real request gets its
-/// `Authorization` header attached here instead.
-fn api_key() -> Result<&'static str, String> {
-    let key = API_KEY.get_or_init(|| std::env::var("TYPESAFE_API_KEY").unwrap_or_default());
-    if key.is_empty() {
-        return Err(
-            "TYPESAFE_API_KEY is not set. Add it to .env (dev) or the host environment (production)."
-                .to_string(),
-        );
+/// A missing or unreadable config file just means no key has been saved yet;
+/// that's the normal state for a fresh install, not an error.
+pub fn load_api_key(app: &AppHandle) {
+    let key = config_path(app)
+        .ok()
+        .and_then(|path| fs::read_to_string(path).ok())
+        .and_then(|text| serde_json::from_str::<Config>(&text).ok())
+        .and_then(|config| config.typesafe_api_key);
+    let _ = API_KEY.set(RwLock::new(key));
+}
+
+fn api_key() -> Option<String> {
+    API_KEY.get()?.read().ok()?.clone()
+}
+
+/// Whether a key has been saved, so the UI can tell "not configured" apart
+/// from any other failure.
+#[tauri::command]
+pub fn has_api_key() -> bool {
+    api_key().is_some()
+}
+
+/// Save the user's API key to disk and make it take effect immediately.
+#[tauri::command]
+pub fn set_api_key(app: AppHandle, key: String) -> Result<(), String> {
+    let trimmed = key.trim().to_string();
+    let value = if trimmed.is_empty() { None } else { Some(trimmed) };
+
+    let path = config_path(&app)?;
+    let config = Config {
+        typesafe_api_key: value.clone(),
+    };
+    let json = serde_json::to_string_pretty(&config).map_err(|e| e.to_string())?;
+    fs::write(path, json).map_err(|e| e.to_string())?;
+
+    if let Some(lock) = API_KEY.get() {
+        *lock.write().map_err(|e| e.to_string())? = value;
+    } else {
+        let _ = API_KEY.set(RwLock::new(value));
     }
-    Ok(key.as_str())
+
+    let _ = app.emit(API_KEY_UPDATED_EVENT, ());
+    Ok(())
 }
 
 /// The shared client. Cloning is cheap; the connection pool is what matters.
@@ -134,7 +185,10 @@ pub async fn api_request(request: ApiRequest) -> Result<ApiResponse, String> {
         }
         builder = builder.header(name, value);
     }
-    builder = builder.header("authorization", format!("Bearer {}", api_key()?));
+    builder = builder.header(
+        "authorization",
+        format!("Bearer {}", api_key().ok_or_else(|| MISSING_KEY_MESSAGE.to_string())?),
+    );
     if let Some(body) = request.body {
         builder = builder.body(body);
     }

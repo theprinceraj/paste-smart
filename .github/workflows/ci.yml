@@ -64,8 +64,6 @@ jobs:
         run: bunx tsc --noEmit
 
       - name: Build Tauri app
-        env:
-          TYPESAFE_API_KEY: ${{ secrets.TYPESAFE_API_KEY }}
         run: bun run tauri build
 
       - name: Upload release artifacts

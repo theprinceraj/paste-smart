@@ -23,15 +23,13 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 tauri-plugin-clipboard-manager = "2"
 # Jev API calls go through Rust: the API rejects browser origins (CORS), and a
-# client we own keeps its connection pool alive between pastes.
+# client we own keeps its connection pool alive between pastes. The user's own
+# API key is read from a local config file (see src/api.rs) and attached here.
 reqwest = { version = "0.12", default-features = false, features = [
   "rustls-tls",
   "http2",
 ] }
 tokio = { version = "1", default-features = false, features = ["time"] }
-# Loads `TYPESAFE_API_KEY` from the repo-root `.env` in dev; production hosts
-# set the real environment variable instead.
-dotenvy = "0.15"
 
 # Desktop-only: global hotkey, active window lookup and synthetic keystrokes.
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]

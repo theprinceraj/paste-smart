@@ -1,0 +1,82 @@
+import { getCurrentWindow } from "@tauri-apps/api/window";
+import type { FormEvent } from "react";
+import { useCallback, useEffect, useState } from "react";
+
+import { useEscapeKey } from "./hooks/useEscapeKey";
+import { hasApiKey, setApiKey } from "./lib/commands";
+
+type SaveState = "idle" | "saving" | "error";
+
+const describeError = (error: unknown): string =>
+  error instanceof Error ? error.message : "Failed to save the key.";
+
+/** Settings window: lets the user paste in their own TypeSafe API key. */
+function Settings() {
+  const [keyInput, setKeyInput] = useState("");
+  const [alreadyConfigured, setAlreadyConfigured] = useState(false);
+  const [saveState, setSaveState] = useState<SaveState>("idle");
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    void hasApiKey().then(setAlreadyConfigured);
+  }, []);
+
+  const close = useCallback(() => void getCurrentWindow().close(), []);
+  useEscapeKey(true, close);
+
+  const handleSubmit = useCallback(
+    async (event: FormEvent<HTMLFormElement>) => {
+      event.preventDefault();
+      setSaveState("saving");
+      setError(null);
+      try {
+        await setApiKey(keyInput);
+        close();
+      } catch (caught) {
+        setSaveState("error");
+        setError(describeError(caught));
+      }
+    },
+    [keyInput, close],
+  );
+
+  return (
+    <div className="settings">
+      <h1 className="settings__title">TypeSafe API key</h1>
+      <p className="settings__hint">
+        {alreadyConfigured
+          ? "A key is already saved. Paste a new one to replace it."
+          : "Paste your TypeSafe API key to enable Smart Paste."}
+      </p>
+      <form className="settings__form" onSubmit={(event) => void handleSubmit(event)}>
+        <input
+          className="settings__input"
+          type="password"
+          value={keyInput}
+          onChange={(event) => setKeyInput(event.target.value)}
+          placeholder="apikey_…"
+          autoFocus
+        />
+        {error && (
+          <p className="status status--error" role="alert">
+            {error}
+          </p>
+        )}
+        <div className="settings__actions">
+          <button type="button" className="settings__cancel" onClick={close}>
+            Cancel
+          </button>
+          <button
+            type="submit"
+            className="settings__save"
+            disabled={saveState === "saving" || keyInput.trim().length === 0}
+          >
+            {saveState === "saving" ? "Saving…" : "Save"}
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
+export default Settings;
