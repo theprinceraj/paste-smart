@@ -1,72 +1,91 @@
 # Smart Paste
 
-A lightweight Windows clipboard utility built with Tauri 2, React and TypeScript.
+Smart Paste is a small Windows app that picks the right thing to paste for you.
 
-- Clipboard text history (last 25 unique entries), kept in memory by polling.
-- `Ctrl+Shift+V` pastes the best match straight into the focused window; the
-  overlay only appears when Jev is unsure or something fails.
-- **Smart Paste** sends the history plus the active window title and app name to
-  Jev (`jev-latest`) via [`@typesafe-ai/sdk`](https://docs.typesafe.ai/sdk/javascript),
-  and pastes the entry it picks when confidence is high enough.
-- Clicking any entry pastes it directly.
-- A system tray icon shows the app is alive, opens the overlay, and quits it.
+It remembers the text you copy. When you press `Ctrl+Shift+V`, it looks at the
+window you're in (its title and app name), asks an AI model which copied item
+fits best, and pastes it. If it's confident, you see nothing — the text just
+appears. If it isn't sure, a small picker opens so you can choose.
+
+## Example
+
+You copied your email address, a git command, and a random link — in that
+order.
+
+- In a **sign-in page**, `Ctrl+Shift+V` pastes your email.
+- In a **terminal**, it pastes the git command.
+- In an **image editor**, nothing fits, so the picker opens instead of guessing.
+
+Plain `Ctrl+V` would have pasted the link every time.
+
+## Features
+
+- Keeps your last 25 copied text items (in memory only).
+- One hotkey: `Ctrl+Shift+V`.
+- No window at all when the answer is clear.
+- A history picker when the answer isn't clear, or when you want to choose.
+- Runs quietly in the system tray.
+- Fast: a smart paste usually takes around half a second.
+
+## Install
+
+Download the latest Windows installer from the
+[Releases](https://github.com/theprinceraj/paste-smart/releases) page and run
+it.
 
 ## Setup
 
+Smart Paste uses [TypeSafe](https://typesafe.ai) to make its choice, so you need
+your own TypeSafe API key.
+
+1. Start Smart Paste. It lives in the system tray.
+2. Click the tray icon and choose **Settings…**
+3. Paste your API key and save.
+
+Your key is stored on your computer only. Without a key, the app still works as
+a simple clipboard history picker.
+
+## How to use
+
+| Action                  | What happens                                         |
+| ----------------------- | ---------------------------------------------------- |
+| `Ctrl+Shift+V`          | Pastes the best match, or opens the picker if unsure |
+| Click the tray icon     | Opens the history picker                             |
+| Click an item in picker | Pastes that item                                     |
+| `Esc` or click away     | Closes the picker                                    |
+| Tray menu → **Quit**    | Exits the app                                        |
+
+## Privacy
+
+- Clipboard history is kept in memory and is gone when you quit.
+- When you press `Ctrl+Shift+V`, the window title, app name, and short previews
+  (up to 120 characters) of your 8 most recent copied items are sent to the
+  TypeSafe API to make the choice.
+- Nothing is sent when you open the picker from the tray.
+
+## Build from source
+
+You need [Bun](https://bun.sh), [Rust](https://rustup.rs), and the
+[Tauri prerequisites](https://tauri.app/start/prerequisites/) for Windows.
+
 ```sh
+git clone https://github.com/theprinceraj/paste-smart.git
+cd paste-smart
 bun install
-cp .env.example .env
-bun run tauri dev
+bun run tauri dev     # run in development mode
+bun run tauri build   # build an installer
 ```
 
-Your TypeSafe API key isn't set via `.env` — open the app, click the tray
-icon → **Settings…**, and paste it in there. It's saved to a local config
-file and read by Rust (`src-tauri/src/api.rs`); it never reaches the webview
-bundle. The request itself is made from Rust: the API rejects browser
-origins, so a plain webview `fetch` fails with _Disallowed CORS origin_. The
-allowed host is scoped in `src-tauri/src/api.rs`'s `API_ORIGIN` check.
+## Built with
 
-Without a key the overlay still works as a plain clipboard picker; Smart Paste
-shows an "Open Settings" prompt instead of failing silently.
+- [Tauri 2](https://tauri.app) and Rust
+- React and TypeScript
+- [TypeSafe](https://typesafe.ai) (`jev-latest` model)
 
-## Using it
+## Contributing
 
-| Action                 | Result                                              |
-| ---------------------- | --------------------------------------------------- |
-| `Ctrl+Shift+V`         | Show the overlay (captures the active window first) |
-| `Smart Paste`          | Ask Jev to choose, then auto-paste if confident     |
-| Click an entry         | Paste that entry                                    |
-| `Esc`, click away, `✕` | Hide the overlay                                    |
+Contributions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
-The window starts hidden and stays out of the taskbar. The tray icon is the
-only visible sign that the app is running: its tooltip reports the number of
-tracked entries (`Smart Paste · 7 items · Ctrl+Shift+V`), and _Quit_ in its menu
-exits the app.
+## License
 
-## Layout
-
-```
-src/
-  components/   presentational UI (Overlay, HistoryList, HistoryItem, …)
-  hooks/        stateful side effects (clipboard polling, hotkey, Smart Paste)
-  lib/          thin wrappers over Tauri APIs and pure clipboard helpers
-  services/     Jev client and the paste sequence
-  types/        shared interfaces
-  config.ts     thresholds, poll interval, hotkey
-  App.tsx       the overlay (default root)
-  Settings.tsx  the API key form, rendered instead of App.tsx in the Settings window
-src-tauri/
-  src/lib.rs              get_active_context (active-win-pos-rs), simulate_paste (enigo)
-  src/api.rs              pooled HTTP client, user API key storage
-  src/settings_window.rs  opens/focuses the Settings window
-  src/tray.rs             tray icon, menu, and the tooltip status
-```
-
-## Tuning
-
-`src/config.ts` holds the history limit, poll interval, accelerator and the
-`MIN_CHOICE_CONFIDENCE` / `MIN_RELEVANCE` thresholds that gate auto-pasting.
-
-## Recommended IDE Setup
-
-- [VS Code](https://code.visualstudio.com/) + [Tauri](https://marketplace.visualstudio.com/items?itemName=tauri-apps.tauri-vscode) + [rust-analyzer](https://marketplace.visualstudio.com/items?itemName=rust-lang.rust-analyzer)
+[MIT](LICENSE)
