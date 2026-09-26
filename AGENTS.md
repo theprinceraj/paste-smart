@@ -93,7 +93,7 @@ config.ts     every tunable constant. Do not scatter magic numbers.
 
 `App.tsx` wires hooks together and renders. It holds no logic of its own.
 
-`Settings.tsx` is a second root component (the API key entry form) rendered
+`Settings.tsx` is a second root component (API key plus launch-on-startup preferences) rendered
 instead of `App.tsx` when the Settings window loads — `main.tsx` branches on
 `window.location.hash === "#settings"` since both windows share one Vite
 bundle. No router; don't add one for two screens.
@@ -190,11 +190,17 @@ instead of a whole second inference.
 are ACL-checked per window. A capability's `"windows"` array must list every
 window label that needs it: `default.json` covers `"main"` (the overlay) only,
 so the Settings window has its own `settings.json` capability
-(`"windows": ["settings"]`) granting just `core:window:allow-close`. Forgetting
-this means the new window's close/show/focus calls fail silently. Non-obvious
-too: `core:window:default` does **not** include `allow-start-dragging` — it's
+(`"windows": ["settings"]`) granting `core:window:allow-hide` plus the three
+autostart plugin permissions (`allow-enable`, `allow-disable`, `allow-is-enabled`).
+Forgetting these means the Settings UI can render but its plugin calls fail.
+Non-obvious too: `core:window:default` does **not** include `allow-start-dragging` — it's
 listed explicitly on `default.json` so `data-tauri-drag-region` works.
 Platform-gated permissions (global-shortcut) live in `desktop.json`.
+
+**Autostart state lives in the OS registration.** The Settings toggle reads `isEnabled()` from
+`tauri-plugin-autostart` whenever the window opens and reads it back after each change. Do not
+duplicate this boolean into `config.json`; two persisted sources could drift if the user changes
+Startup Apps from Windows Settings or Task Manager.
 
 **CORS.** The TypeSafe API rejects browser origins outright
 (`400 Disallowed CORS origin`). The webview can never call it directly. All

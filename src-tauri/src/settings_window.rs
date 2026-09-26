@@ -1,5 +1,6 @@
 //! The Settings window: a frameless window, styled like the overlay, for
-//! entering the user's own TypeSafe API key. Deliberately not the overlay
+//! configuring the user's API key and desktop startup behavior. Deliberately
+//! not the overlay
 //! window itself — that one is a small always-on-top popup, unsuitable for a
 //! form the user needs to find again later — but it shares the same
 //! frameless card look so the two windows read as one app.
@@ -70,7 +71,7 @@ pub fn open_settings_window(app: AppHandle) -> Result<(), String> {
 fn build<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<tauri::WebviewWindow<R>> {
     WebviewWindowBuilder::new(app, SETTINGS_LABEL, WebviewUrl::App(SETTINGS_URL.into()))
         .title("Smart Paste Settings")
-        .inner_size(420.0, 280.0)
+        .inner_size(420.0, 360.0)
         .resizable(false)
         .decorations(false)
         .shadow(true)

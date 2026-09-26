@@ -207,10 +207,46 @@ body {
   background: var(--surface-hover);
 }
 
+.settings {
+  gap: 14px;
+}
+
+.settings__section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.settings__section--key {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
 .settings__hint {
   color: var(--muted);
   font-size: 13px;
   margin: 0;
+}
+
+.settings__toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.settings__toggle input {
+  accent-color: var(--accent);
+  margin: 0;
+}
+
+.settings__toggle:has(input:disabled) {
+  color: var(--muted);
+  cursor: default;
 }
 
 .settings__form {

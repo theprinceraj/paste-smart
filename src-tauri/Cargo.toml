@@ -34,6 +34,7 @@ tokio = { version = "1", default-features = false, features = ["time"] }
 
 # Desktop-only: global hotkey, active window lookup and synthetic keystrokes.
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
+tauri-plugin-autostart = "2"
 tauri-plugin-global-shortcut = "2"
 active-win-pos-rs = "0.11"
 enigo = "0.3"
