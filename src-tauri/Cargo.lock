@@ -2963,7 +2963,7 @@ dependencies = [
 
 [[package]]
 name = "paste-smart"
-version = "0.1.6"
+version = "0.1.7"
 dependencies = [
  "active-win-pos-rs",
  "enigo",
